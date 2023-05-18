@@ -1,0 +1,38 @@
+#v1
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Node CI/CD 
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: rsync deployments
+        uses: burnett01/rsync-deployments@5.1
+        with:
+          switches: -avzr --delete --exclude="public"  --exclude="server.js"
+          path: ./*
+          remote_path: /mnt/data/home/master/applications/ccrphsverq/public_html/
+          remote_host: ${{ secrets.HOST }}
+          remote_user: ${{ secrets.USERNAME }}
+          remote_key: "${{ secrets.KEY }}"
+
+      - name: executing commands on remote using ssh.
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          # password: ${{ secrets.PASSWORD }}
+          script: |
+              cd /mnt/data/home/master/applications/ccrphsverq/public_html/
+              pm2 stop cbms_backend
+              npm i
+              pm2 restart cbms_backend
